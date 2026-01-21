@@ -22,16 +22,12 @@
     <footer>
       <small>Copyright © 2026 Oscar Djupfeldt</small>
     </footer>
-
+    <script src="pages.js"></script>
     <script>
       // Configuration: the root-level folders to scan
       const FOLDERS = ["assignment", "flow-writing", "world-building"];
 
-      // Fallback entries in case directory listing isn't available (or when opened as file://)
-      // Add more paths here manually if auto-discovery is not possible on your host.
-      const FALLBACK = [
-        { path: "world-building/example.html", title: "World-Building Example" }
-      ];
+      // PAGES is loaded from pages.js
 
       const state = { activeFilter: "all", items: [] };
 
@@ -72,40 +68,11 @@
         }
       }
 
-      async function tryFetchDirectoryIndex(folder) {
-        // Many static servers expose an index listing for a folder path (e.g., /world-building/)
-        // We'll attempt to fetch and parse anchor tags for .html files.
-        try {
-          const url = `${folder}/`;
-          const res = await fetch(url, { method: "GET" });
-          if (!res.ok) throw new Error("HTTP " + res.status);
-          const html = await res.text();
-          const doc = new DOMParser().parseFromString(html, "text/html");
-          const links = [...doc.querySelectorAll('a[href]')]
-            .map(a => a.getAttribute('href'))
-            .filter(h => h && !h.startsWith(".."))
-            .filter(h => h.toLowerCase().endsWith(".html"));
-          return links.map(h => ({
-            folder,
-            path: `${folder}/${h.replace(/^\.\//, "")}`,
-            title: extTitleize(h)
-          }));
-        } catch (e) {
-          return [];
-        }
-      }
-
       async function discover() {
         const all = [];
 
-        // Try directory listing per folder
-        for (const folder of FOLDERS) {
-          const discovered = await tryFetchDirectoryIndex(folder);
-          for (const it of discovered) all.push(it);
-        }
-
         // Include fallback only for those not already found
-        for (const fb of FALLBACK) {
+        for (const fb of PAGES) {
           if (!all.some(it => it.path === fb.path)) {
             const folder = fb.path.split("/")[0];
             all.push({ folder, path: fb.path, title: fb.title || extTitleize(fb.path.split("/").pop() || fb.path) });
