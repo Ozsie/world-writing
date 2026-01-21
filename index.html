@@ -1,0 +1,226 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Världsskrivande — Index</title>
+    <meta name="description" content="Landing page linking to assignments, flow writing, and world building pages." />
+    <style>
+      :root {
+        --bg: #0f1222;
+        --bg-soft: #151838;
+        --card: #171a3a;
+        --text: #e9ecff;
+        --muted: #aab0d6;
+        --accent: #7aa2ff;
+        --accent-2: #b07aff;
+        --ring: rgba(122, 162, 255, 0.6);
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 2px 10px rgba(122, 162, 255, 0.1);
+      }
+
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        color: var(--text);
+        background: radial-gradient(1200px 800px at 90% -10%, #1b1f48, transparent 60%),
+                    radial-gradient(1000px 900px at -30% 110%, #0b0e1c, transparent 60%),
+                    var(--bg);
+      }
+
+      header {
+        padding: 48px 20px 12px;
+        text-align: center;
+      }
+      .title {
+        font-size: clamp(28px, 4vw, 44px);
+        font-weight: 800;
+        letter-spacing: 0.4px;
+        margin: 0 0 8px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .container {
+        width: min(1100px, 92vw);
+        margin: 28px auto 64px;
+      }
+      .toolbar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 18px;
+      }
+      .filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .pill {
+        cursor: pointer;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: linear-gradient(180deg, var(--bg-soft), #0e1130);
+        border: 1px solid #252953;
+        color: var(--muted);
+        transition: all 160ms ease;
+        user-select: none;
+      }
+      .pill[aria-pressed="true"], .pill:hover {
+        color: var(--text);
+        border-color: var(--accent);
+        box-shadow: inset 0 0 0 1px var(--ring);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        border-radius: 16px;
+        padding: 16px;
+        background: linear-gradient(180deg, var(--card), #121533);
+        border: 1px solid #272b59;
+        box-shadow: var(--shadow);
+        transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+      }
+      .card:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 12px 32px rgba(0,0,0,.4), 0 4px 14px rgba(122,162,255,.2); }
+      .card a {
+        text-decoration: none;
+        color: var(--text);
+      }
+      .card .path { color: var(--muted); font-size: 12px; }
+      .badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid #2f3570; color: var(--accent); width: max-content; }
+
+      footer { text-align: center; color: var(--muted); padding: 28px 0 40px; }
+
+      /* Minimal focus state for keyboard users */
+      a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 class="title">Världsskrivande</h1>
+    </header>
+
+    <div class="container">
+      <div class="toolbar">
+        <div class="filters" id="filters" aria-label="Filters"></div>
+        <button class="pill" id="refreshBtn" title="Re-scan folders">↻ Refresh</button>
+      </div>
+      <div class="grid" id="grid" aria-live="polite"></div>
+    </div>
+
+    <footer>
+      <small>Copyright © 2026 Oscar Djupfeldt</small>
+    </footer>
+
+    <script>
+      // Configuration: the root-level folders to scan
+      const FOLDERS = ["assignment", "flow-writing", "world-building"];
+
+      // Fallback entries in case directory listing isn't available (or when opened as file://)
+      // Add more paths here manually if auto-discovery is not possible on your host.
+      const FALLBACK = [
+        { path: "world-building/example.html", title: "World-Building Example" }
+      ];
+
+      const state = { activeFilter: "all", items: [] };
+
+      const grid = document.getElementById("grid");
+      const filtersEl = document.getElementById("filters");
+      const refreshBtn = document.getElementById("refreshBtn");
+
+      function extTitleize(fileName) {
+        const base = fileName.replace(/\.[^/.]+$/, "");
+        return base.replace(/[\-_]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      }
+
+      function render() {
+        const items = state.items.filter(it => state.activeFilter === "all" || it.folder === state.activeFilter);
+        grid.innerHTML = items.map(it => `
+          <div class="card">
+            <span class="badge">${it.folder}</span>
+            <a href="${it.path}" aria-label="Open ${it.title}"><strong>${it.title}</strong></a>
+            <div class="path">${it.path}</div>
+          </div>
+        `).join("");
+      }
+
+      function renderFilters() {
+        const set = new Set(["all", ...FOLDERS]);
+        filtersEl.innerHTML = "";
+        for (const key of set) {
+          const btn = document.createElement("button");
+          btn.className = "pill";
+          btn.textContent = key;
+          btn.setAttribute("aria-pressed", String(key === state.activeFilter));
+          btn.addEventListener("click", () => {
+            state.activeFilter = key;
+            for (const b of filtersEl.querySelectorAll(".pill")) b.setAttribute("aria-pressed", String(b === btn));
+            render();
+          });
+          filtersEl.appendChild(btn);
+        }
+      }
+
+      async function tryFetchDirectoryIndex(folder) {
+        // Many static servers expose an index listing for a folder path (e.g., /world-building/)
+        // We'll attempt to fetch and parse anchor tags for .html files.
+        try {
+          const url = `${folder}/`;
+          const res = await fetch(url, { method: "GET" });
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          const html = await res.text();
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          const links = [...doc.querySelectorAll('a[href]')]
+            .map(a => a.getAttribute('href'))
+            .filter(h => h && !h.startsWith(".."))
+            .filter(h => h.toLowerCase().endsWith(".html"));
+          return links.map(h => ({
+            folder,
+            path: `${folder}/${h.replace(/^\.\//, "")}`,
+            title: extTitleize(h)
+          }));
+        } catch (e) {
+          return [];
+        }
+      }
+
+      async function discover() {
+        const all = [];
+
+        // Try directory listing per folder
+        for (const folder of FOLDERS) {
+          const discovered = await tryFetchDirectoryIndex(folder);
+          for (const it of discovered) all.push(it);
+        }
+
+        // Include fallback only for those not already found
+        for (const fb of FALLBACK) {
+          if (!all.some(it => it.path === fb.path)) {
+            const folder = fb.path.split("/")[0];
+            all.push({ folder, path: fb.path, title: fb.title || extTitleize(fb.path.split("/").pop() || fb.path) });
+          }
+        }
+
+        // Sort by folder then title
+        all.sort((a, b) => a.folder.localeCompare(b.folder) || a.title.localeCompare(b.title));
+
+        state.items = all;
+        renderFilters();
+        render();
+      }
+
+      refreshBtn.addEventListener('click', discover);
+      discover();
+    </script>
+  </body>
+  </html>
